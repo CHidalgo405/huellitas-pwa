@@ -30,7 +30,10 @@ COMO PROBARLA
 4) Manifest e iconos
    - DevTools > Application > Manifest: muestra los 10 iconos y que es instalable.
 
-5) Notificaciones (solo con el servidor local encendido, ver abajo)
+5) Notificaciones
+   - Sin servidor (funciona tambien en GitHub Pages): pulsar "Avisos", aceptar el
+     permiso y enviar un mensaje; aparece una notificacion en el mismo dispositivo.
+   - Con servidor (llegan a todos los suscritos), ver abajo:
    - En la carpeta "server" ejecutar:  npm install   y luego   npm start
    - Abrir http://localhost:3000, elegir una mascota y pulsar "Avisos" (aceptar el permiso).
    - Escribir un mensaje: aparece la notificacion.
@@ -43,7 +46,7 @@ corre en la computadora del autor (http://localhost:3000), asi que:
    - Con el servidor encendido en esa computadora, las notificaciones funcionan
      tambien desde la pagina de GitHub Pages.
    - Desde cualquier otro equipo, la app abre y funciona sin conexion, pero no
-     puede alcanzar ese "localhost"; solo se muestra la notificacion local de
-     respaldo en el propio dispositivo.
+     puede alcanzar ese "localhost": solo se ve la notificacion local en el
+     propio dispositivo (siempre se muestra al enviar un mensaje), no llega a los demas.
 Para que funcionen para todos habria que desplegar el servidor en un servicio
 como Render o Railway y cambiar la constante API_URL en huellitas/js/app.js.

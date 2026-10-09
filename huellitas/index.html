@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Huellitas</title>
+    <meta name="description" content="Huellitas: el chat de mascotas que funciona sin conexión y te avisa cuando llega un mensaje.">
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#D62839">
+    <link rel="shortcut icon" type="image/x-icon" href="img/favicon.ico">
+    <link rel="icon" type="image/png" sizes="192x192" href="img/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Huellitas">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Íconos de la interfaz (en línea: no dependen de ningún CDN y funcionan sin red) -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <defs>
+            <symbol id="i-huella" viewBox="0 0 24 24">
+                <ellipse cx="4.6" cy="11.2" rx="1.9" ry="2.7" transform="rotate(-22 4.6 11.2)"/>
+                <ellipse cx="9" cy="6.4" rx="2" ry="2.8" transform="rotate(-7 9 6.4)"/>
+                <ellipse cx="15" cy="6.4" rx="2" ry="2.8" transform="rotate(7 15 6.4)"/>
+                <ellipse cx="19.4" cy="11.2" rx="1.9" ry="2.7" transform="rotate(22 19.4 11.2)"/>
+                <path d="M12 12c-3.4 0-6 3.1-6 5.6 0 1.7 1.2 2.7 2.8 2.7 1.2 0 2-.5 3.2-.5s2 .5 3.2.5c1.6 0 2.8-1 2.8-2.7C18 15.1 15.4 12 12 12Z"/>
+            </symbol>
+            <symbol id="i-campana" viewBox="0 0 24 24">
+                <path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 20a2 2 0 0 0 3.4 0"/>
+            </symbol>
+            <symbol id="i-lapiz" viewBox="0 0 24 24">
+                <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+            </symbol>
+            <symbol id="i-volver" viewBox="0 0 24 24">
+                <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
+            </symbol>
+            <symbol id="i-cerrar" viewBox="0 0 24 24">
+                <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+            </symbol>
+            <symbol id="i-enviar" viewBox="0 0 24 24">
+                <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
+            </symbol>
+        </defs>
+    </svg>
+
+    <!-- Correa (encabezado) -->
+    <header class="correa">
+        <div class="correa-fila">
+            <button id="salir-btn" class="btn-icono oculto" type="button" aria-label="Cambiar de mascota">
+                <svg class="ico" aria-hidden="true"><use href="#i-volver"/></svg>
+            </button>
+
+            <h1 id="titulo" class="titulo">
+                <svg class="ico ico-lleno" aria-hidden="true"><use href="#i-huella"/></svg>
+                <span id="titulo-texto">Huellitas</span>
+            </h1>
+
+            <button id="notif-btn" class="btn-avisos oculto" type="button" aria-pressed="false">
+                <svg class="ico" aria-hidden="true"><use href="#i-campana"/></svg>
+                <span id="notif-texto">Avisos</span>
+            </button>
+        </div>
+    </header>
+    <!-- Fin correa -->
+
+    <main class="pantalla">
+
+        <!-- Estado de conexión -->
+        <p id="estado" class="estado oculto" role="status">
+            Sin conexión. Tus mensajes se guardan en este dispositivo, pero aún no llegan a los demás.
+        </p>
+
+        <!-- Selección de mascota -->
+        <section id="seleccion" class="seleccion">
+            <h2>¿Quién habla hoy?</h2>
+            <p class="seleccion-ayuda">Elige una placa para entrar al chat.</p>
+
+            <ul class="placas">
+                <li>
+                    <button class="placa seleccion-avatar" type="button" data-user="michi">
+                        <span class="correa-tira"></span><span class="aro"></span>
+                        <span class="disco"><img src="img/avatars/michi.svg" alt=""></span>
+                        <span class="placa-nombre">Michi</span>
+                    </button>
+                </li>
+                <li>
+                    <button class="placa seleccion-avatar" type="button" data-user="bruno">
+                        <span class="correa-tira"></span><span class="aro"></span>
+                        <span class="disco"><img src="img/avatars/bruno.svg" alt=""></span>
+                        <span class="placa-nombre">Bruno</span>
+                    </button>
+                </li>
+                <li>
+                    <button class="placa seleccion-avatar" type="button" data-user="canela">
+                        <span class="correa-tira"></span><span class="aro"></span>
+                        <span class="disco"><img src="img/avatars/canela.svg" alt=""></span>
+                        <span class="placa-nombre">Canela</span>
+                    </button>
+                </li>
+                <li>
+                    <button class="placa seleccion-avatar" type="button" data-user="bambu">
+                        <span class="correa-tira"></span><span class="aro"></span>
+                        <span class="disco"><img src="img/avatars/bambu.svg" alt=""></span>
+                        <span class="placa-nombre">Bambú</span>
+                    </button>
+                </li>
+                <li>
+                    <button class="placa seleccion-avatar" type="button" data-user="nube">
+                        <span class="correa-tira"></span><span class="aro"></span>
+                        <span class="disco"><img src="img/avatars/nube.svg" alt=""></span>
+                        <span class="placa-nombre">Nube</span>
+                    </button>
+                </li>
+            </ul>
+        </section>
+        <!-- Fin selección -->
+
+        <!-- Muro de mensajes -->
+        <ul id="timeline" class="timeline oculto" aria-label="Mensajes de la manada"></ul>
+        <!-- Fin muro -->
+
+    </main>
+
+    <!-- Botón de nuevo mensaje -->
+    <button id="nuevo-btn" class="fab oculto" type="button" aria-label="Nuevo mensaje">
+        <svg class="ico" aria-hidden="true"><use href="#i-lapiz"/></svg>
+    </button>
+
+    <!-- Hoja para escribir -->
+    <div id="modal" class="fondo oculto">
+        <div class="hoja" role="dialog" aria-modal="true" aria-labelledby="titulo-modal">
+            <div class="hoja-cab">
+                <img id="modal-avatar" class="hoja-avatar" src="img/avatars/michi.svg" alt="">
+                <h2 id="titulo-modal">Nuevo mensaje</h2>
+                <button id="cancel-btn" class="btn-icono btn-icono-oscuro" type="button" aria-label="Cerrar sin enviar">
+                    <svg class="ico" aria-hidden="true"><use href="#i-cerrar"/></svg>
+                </button>
+            </div>
+
+            <label class="visualmente-oculto" for="txtMensaje">Mensaje</label>
+            <textarea id="txtMensaje" rows="4" maxlength="240" placeholder="¿Qué quieres contarle a la manada?"></textarea>
+
+            <div class="hoja-pie">
+                <span id="contador" class="contador" aria-live="off">240</span>
+                <button id="post-btn" class="btn-primario" type="button">
+                    <svg class="ico" aria-hidden="true"><use href="#i-enviar"/></svg>
+                    Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- Fin hoja -->
+
+    <!-- Avisos breves -->
+    <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
+
+    <script src="js/libs/jquery.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,49 @@
+HUELLITAS - Chat de mascotas (PWA)
+
+
+DE QUE TRATA
+Huellitas es un chat donde cada mascota entra con su placa, escribe en un muro
+compartido y avisa a las demas con una notificacion. Es una PWA: se puede
+instalar, abre sin conexion y envia notificaciones push.
+
+ENLACES
+- Aplicacion (GitHub Pages): https://chidalgo405.github.io/huellitas-pwa/huellitas/
+- Repositorio (codigo):      https://github.com/CHidalgo405/huellitas-pwa
+
+COMO PROBARLA
+
+1) Instalar
+   - Abrir la aplicacion en Chrome.
+   - Pulsar el icono de instalar en la barra de direcciones (o menu > Instalar Huellitas).
+
+2) Usarla
+   - Elegir una mascota (placa).
+   - Pulsar el boton del lapiz, escribir un mensaje y pulsar "Enviar".
+   - El mensaje aparece arriba del muro y queda guardado en el dispositivo.
+
+3) Modo offline
+   - Abrir DevTools (F12) > Application > Service Workers: debe decir "activated".
+   - Marcar la casilla "Offline" y recargar la pagina (Cmd/Ctrl + R).
+   - La app abre completa, con iconos, avatares y mensajes, y muestra el aviso
+     "Sin conexion". Si se escribe un mensaje, se guarda pero no llega a los demas.
+
+4) Manifest e iconos
+   - DevTools > Application > Manifest: muestra los 10 iconos y que es instalable.
+
+5) Notificaciones (solo con el servidor local encendido, ver abajo)
+   - En la carpeta "server" ejecutar:  npm install   y luego   npm start
+   - Abrir http://localhost:3000, elegir una mascota y pulsar "Avisos" (aceptar el permiso).
+   - Escribir un mensaje: aparece la notificacion.
+
+POR QUE NO FUNCIONAN LAS NOTIFICACIONES EN GITHUB PAGES
+GitHub Pages solo sirve archivos estaticos (HTML, CSS, JS); no puede ejecutar
+un servidor. Las notificaciones push necesitan un servidor (carpeta "server",
+Express + web-push) que guarde las suscripciones y envie el push. Ese servidor
+corre en la computadora del autor (http://localhost:3000), asi que:
+   - Con el servidor encendido en esa computadora, las notificaciones funcionan
+     tambien desde la pagina de GitHub Pages.
+   - Desde cualquier otro equipo, la app abre y funciona sin conexion, pero no
+     puede alcanzar ese "localhost"; solo se muestra la notificacion local de
+     respaldo en el propio dispositivo.
+Para que funcionen para todos habria que desplegar el servidor en un servicio
+como Render o Railway y cambiar la constante API_URL en huellitas/js/app.js.

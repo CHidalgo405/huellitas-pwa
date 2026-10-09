@@ -1,5 +1,5 @@
 // Sube el número cada vez que cambies cualquier archivo del App Shell
-const CACHE_NAME = 'huellitas-v1';
+const CACHE_NAME = 'huellitas-v2';
 
 const APP_SHELL = [
     './',
@@ -123,6 +123,8 @@ self.addEventListener('push', (e) => {
 
     const opciones = {
         body: datos.body,
+        // Mismo tag que la notificación local de app.js: evita duplicados en el dispositivo que escribió
+        tag: datos.title + '|' + datos.body,
         icon: './img/icons/icon-192x192.png',
         badge: './img/icons/badge-96x96.png',
         vibrate: [120, 60, 120]

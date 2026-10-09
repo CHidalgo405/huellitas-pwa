@@ -15,7 +15,7 @@ Un chat donde cada mascota entra con su placa, escribe en el muro de la manada y
 | Instalarla sin tienda de apps | `manifest.json` con nombre, colores y 10 íconos (8 normales + 2 *maskable*) |
 | Que abra sin red | Service Worker con estrategia *cache first* sobre el App Shell completo |
 | Que se vea completa sin red | Todo es local: sin CDN, sin fuentes externas, íconos de interfaz en SVG dentro del HTML |
-| Enterarse de mensajes nuevos | Notificaciones Push (Web Push + VAPID) y notificación local de respaldo |
+| Enterarse de mensajes nuevos | Notificaciones Push (Web Push + VAPID) y notificación local en el dispositivo |
 | Poder publicarla gratis | Rutas relativas, funciona en GitHub Pages bajo cualquier subcarpeta |
 
 ## Estructura
@@ -50,7 +50,7 @@ Los mensajes se guardan en `localStorage`, así que el muro también se ve sin c
 ### Notificaciones
 - Botón **Avisos**: pide permiso, crea la suscripción push y la manda al servidor.
 - Al enviar un mensaje, el servidor reparte el push a todas las suscripciones.
-- Si el servidor no responde o no hay red, se muestra una notificación local en este dispositivo.
+- Al enviar un mensaje también sale siempre una notificación local en este dispositivo, aunque no haya servidor ni red. Si el push del servidor también llega, lo reemplaza (mismo `tag`) en lugar de duplicarse.
 - Al tocar una notificación, la app se abre o se enfoca.
 
 ## Cómo probarla

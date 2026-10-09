@@ -226,7 +226,9 @@ txtMensaje.on('input', actualizarContador);
 
 // ===== Notificaciones =====
 
-// Muestra una notificación en este dispositivo (sin pasar por el servidor)
+// Muestra una notificación en este dispositivo (sin pasar por el servidor).
+// El "tag" es el mismo que usa sw.js para los push: si también llega el push
+// del servidor, reemplaza a esta en lugar de duplicarla.
 async function notificarLocal(tituloNotif, cuerpo) {
 
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
@@ -237,6 +239,7 @@ async function notificarLocal(tituloNotif, cuerpo) {
 
         await registro.showNotification(tituloNotif, {
             body: cuerpo,
+            tag: tituloNotif + '|' + cuerpo,
             icon: 'img/icons/icon-192x192.png',
             badge: 'img/icons/badge-96x96.png'
         });
@@ -248,10 +251,9 @@ async function notificarLocal(tituloNotif, cuerpo) {
 // Pide al servidor que mande el push a todas las mascotas suscritas
 async function enviarPush(tituloNotif, cuerpo) {
 
-    // Sin red ni lo intentamos: avisamos directo y mostramos la notificación local
+    // Sin red ni lo intentamos
     if (!navigator.onLine) {
         mostrarAviso('Sin conexión: tu mensaje se guardó aquí, pero no llegó a los demás.');
-        notificarLocal(tituloNotif, cuerpo);
         return;
     }
 
@@ -268,9 +270,6 @@ async function enviarPush(tituloNotif, cuerpo) {
         console.warn('No se pudo enviar el push:', err);
 
         mostrarAviso('No se pudo contactar al servidor de avisos. Revisa que esté encendido.');
-
-        // Sin servidor, al menos avisamos en este dispositivo
-        notificarLocal(tituloNotif, cuerpo);
     }
 }
 
@@ -304,6 +303,8 @@ postBtn.on('click', function () {
     agregarMensaje({ autor: usuario, texto: mensaje, hora: Date.now() });
     cerrarModal();
 
+    // Siempre avisa en este dispositivo; el servidor reparte el push a los demás
+    notificarLocal('@' + usuario, mensaje);
     enviarPush('@' + usuario, mensaje);
 });
 

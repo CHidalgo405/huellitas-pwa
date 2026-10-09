@@ -9,6 +9,7 @@ const VAPID_PUBLIC_KEY = 'BNRAGHBZHLR4BkI7APjcnYqC2Vv2pW5oOYSc1PVbKcxHLTVkVda-9f
 
 const PERSONAJES = ['michi', 'bruno', 'canela', 'bambu', 'nube'];
 const CLAVE_MENSAJES = 'huellitas:mensajes';
+const CLAVE_USUARIO = 'huellitas:usuario';
 const MAX_MENSAJES = 50;
 
 function urlBase64ToUint8Array(base64String) {
@@ -43,6 +44,9 @@ var usuario;
 
 var temporizadorModal;
 var temporizadorAviso;
+
+// Hay una versión nueva esperando a que cierres el mensaje que estás escribiendo
+var actualizacionPendiente = false;
 
 
 // ===== Mensajes guardados en el dispositivo (así también se ven sin red) =====
@@ -168,6 +172,7 @@ avatarBtns.on('click', function () {
 
     titulo.text('@' + usuario);
 
+    recordarUsuario(usuario);
     logIn(true);
 
 });
@@ -175,9 +180,31 @@ avatarBtns.on('click', function () {
 // Botón de salir
 salirBtn.on('click', function () {
 
+    recordarUsuario(null);
     logIn(false);
 
 });
+
+// Recordar la mascota solo mientras dure la pestaña: así una recarga
+// (por ejemplo, al actualizarse la app) no te devuelve a la selección
+function recordarUsuario(personaje) {
+    try {
+        if (personaje) sessionStorage.setItem(CLAVE_USUARIO, personaje);
+        else sessionStorage.removeItem(CLAVE_USUARIO);
+    } catch (e) { /* sin almacenamiento disponible */ }
+}
+
+function restaurarSesion() {
+    try {
+        var guardado = sessionStorage.getItem(CLAVE_USUARIO);
+
+        if (PERSONAJES.indexOf(guardado) !== -1) {
+            usuario = guardado;
+            titulo.text('@' + usuario);
+            logIn(true);
+        }
+    } catch (e) { /* sin almacenamiento disponible */ }
+}
 
 
 // ===== Hoja para escribir un mensaje =====
@@ -203,6 +230,9 @@ function cerrarModal() {
         txtMensaje.val('');
         actualizarContador();
         nuevoBtn.trigger('focus');
+
+        // Si llegó una versión nueva mientras escribías, la aplicamos ahora
+        if (actualizacionPendiente) window.location.reload();
     }, 220);
 }
 
@@ -339,13 +369,20 @@ notifBtn.on('click', async function () {
 
         console.log(JSON.stringify(sub));
 
-        await enviarSuscripcion(sub);
-
-        notificarLocal('Avisos activados', 'Te avisaremos cuando alguien de la manada escriba.');
+        // Registrarse en el servidor puede fallar (apagado o sin red) sin afectar las notificaciones locales
+        try {
+            await enviarSuscripcion(sub);
+            notificarLocal('Avisos activados', 'Te avisaremos cuando alguien de la manada escriba.');
+        } catch (err) {
+            console.warn('El servidor de avisos no respondió:', err);
+            mostrarAviso('Avisos activados en este dispositivo. El servidor no responde, así que no llegarán a los demás.');
+            notificarLocal('Avisos activados', 'Verás una notificación cuando escribas un mensaje.');
+        }
 
     } catch (err) {
-        console.warn('No se pudo completar la suscripción:', err);
-        mostrarAviso('No se pudo conectar con el servidor de avisos. Revisa que esté encendido e inténtalo de nuevo.');
+        console.warn('No se pudo crear la suscripción push:', err);
+        mostrarAviso('Avisos activados en este dispositivo. No se pudo crear la suscripción push.');
+        notificarLocal('Avisos activados', 'Verás una notificación cuando escribas un mensaje.');
     }
 });
 
@@ -382,22 +419,68 @@ $(window).on('online', function () {
     actualizarConexion();
     mostrarAviso('De vuelta en línea.');
     sincronizarSuscripcion();
+    buscarActualizacion();
 });
 
 actualizarConexion();
 
 
-// Registro del Service Worker
+// ===== Service Worker y actualizaciones =====
+
+var habiaControlador = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
+
+// Pregunta si hay un sw.js nuevo (si lo hay, se instala y se activa solo)
+function buscarActualizacion() {
+    if (!('serviceWorker' in navigator) || !navigator.onLine) return;
+
+    navigator.serviceWorker.getRegistration().then(function (registro) {
+        if (registro) return registro.update();
+    }).catch(function () { /* sin red: se reintenta después */ });
+}
+
+// Cuando el SW nuevo toma el control, recargamos para mostrar la versión nueva
+function aplicarActualizacion() {
+    // Si estás escribiendo, esperamos a que cierres la hoja para no perder tu mensaje
+    if (!modal.hasClass('oculto')) {
+        actualizacionPendiente = true;
+        return;
+    }
+
+    window.location.reload();
+}
+
 if ('serviceWorker' in navigator) {
+
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+        // La primera instalación también cambia de controlador: ahí no hay nada que recargar
+        if (!habiaControlador) {
+            habiaControlador = true;
+            return;
+        }
+
+        aplicarActualizacion();
+    });
+
     window.addEventListener('load', function () {
-        navigator.serviceWorker.register('sw.js')
+        // updateViaCache: 'none' hace que sw.js siempre se pida a la red, nunca al caché del navegador
+        navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
             .catch(function (err) {
                 console.log('Error al registrar el SW:', err);
             });
 
         sincronizarSuscripcion();
     });
+
+    // Busca versiones nuevas al volver a la app y cada minuto mientras está abierta
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') buscarActualizacion();
+    });
+
+    setInterval(buscarActualizacion, 60 * 1000);
 }
+
+// Si ya habías elegido mascota en esta pestaña, volvemos a donde estabas
+restaurarSesion();
 
 if (!('Notification' in window) || !('PushManager' in window)) {
     console.log('Este navegador no soporta notificaciones push');

@@ -13,7 +13,7 @@ Un chat donde cada mascota entra con su placa, escribe en el muro de la manada y
 | Necesidad | Cómo la resuelve |
 | --- | --- |
 | Instalarla sin tienda de apps | `manifest.json` con nombre, colores y 10 íconos (8 normales + 2 *maskable*) |
-| Que abra sin red | Service Worker con estrategia *cache first* sobre el App Shell completo |
+| Que abra sin red | Service Worker con estrategia *network first* y respaldo en caché sobre el App Shell completo |
 | Que se vea completa sin red | Todo es local: sin CDN, sin fuentes externas, íconos de interfaz en SVG dentro del HTML |
 | Enterarse de mensajes nuevos | Notificaciones Push (Web Push + VAPID) y notificación local en el dispositivo |
 | Poder publicarla gratis | Rutas relativas, funciona en GitHub Pages bajo cualquier subcarpeta |
@@ -43,7 +43,7 @@ Desempeño-1p/
 `manifest.json` define `id`, `start_url`, `scope`, `display: standalone`, `theme_color` y `background_color`. Los íconos cubren 72 a 512 px con `purpose: "any"`, más dos íconos `maskable` (192 y 512) con el dibujo dentro de la zona segura para que Android no los recorte.
 
 ### Modo offline
-`sw.js` guarda en `huellitas-v1` el App Shell completo (HTML, CSS, JS, jQuery, favicon, íconos y avatares) al instalarse. Después responde primero desde el caché y, si algo falta, lo pide a la red y lo guarda. Si abres cualquier página sin red, entrega `index.html`.
+`sw.js` guarda en el caché (`huellitas-vN`) el App Shell completo (HTML, CSS, JS, jQuery, favicon, íconos y avatares) al instalarse. Después, cada archivo se pide primero a la red; si no hay conexión o el servidor tarda más de 2 segundos, se entrega la copia guardada. Si abres cualquier página sin red, entrega `index.html`.
 
 Los mensajes se guardan en `localStorage`, así que el muro también se ve sin conexión. Si escribes sin red, el mensaje queda en el dispositivo y la app te avisa que no llegó a los demás.
 
@@ -78,4 +78,9 @@ Dos cosas a tener en cuenta:
 - **El servidor no corre en GitHub Pages** (solo sirve archivos estáticos). La app publicada abre y funciona sin red igual, pero para repartir notificaciones push a otras personas necesita el servidor encendido. Por defecto `API_URL` en `js/app.js` apunta a `http://localhost:3000`; si lo despliegas en otro lado (Render, Railway…), cambia esa constante.
 - **No subas `server/.env`**: tiene tu llave privada. El `.gitignore` de `Desempeño-1p/` ya lo excluye mientras ese sea el directorio raíz del repositorio.
 
-Cuando cambies cualquier archivo de la app, sube el número de `CACHE_NAME` en `sw.js` (`huellitas-v2`, `v3`…), si no el navegador seguirá mostrando la versión guardada.
+## Cómo se actualiza
+
+- **Al abrir o recargar la página** ya ves la última versión publicada, sin recargar dos veces: el Service Worker revalida cada archivo con el servidor y no usa la copia que GitHub Pages deja 10 minutos en el caché del navegador.
+- **Con la app abierta** busca versiones nuevas cada minuto y al volver a la pestaña. Si encuentra una, se recarga sola; si estás escribiendo un mensaje, espera a que lo cierres para no perderlo.
+- **Al publicar**, sube el número de `CACHE_NAME` en `sw.js` (`huellitas-v5`, `v6`…). Eso es lo que avisa a las pestañas ya abiertas de que hay algo nuevo.
+- GitHub Pages tarda entre unos segundos y un par de minutos en publicar después de un `push`; eso no se puede acelerar desde la app.

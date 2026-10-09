@@ -1,5 +1,8 @@
-// Sube el número cada vez que cambies cualquier archivo del App Shell
-const CACHE_NAME = 'huellitas-v2';
+// Sube el número en cada publicación: así las pestañas que ya están abiertas se actualizan solas
+const CACHE_NAME = 'huellitas-v4';
+
+// Tiempo máximo que esperamos a la red antes de usar la copia guardada
+const ESPERA_RED_MS = 2000;
 
 const APP_SHELL = [
     './',
@@ -32,7 +35,10 @@ const APP_SHELL = [
 self.addEventListener('install', (e) => {
     e.waitUntil(
         caches.open(CACHE_NAME)
-            .then((cache) => cache.addAll(APP_SHELL))
+            // cache: 'reload' evita copiar archivos viejos que el navegador aún tenga guardados
+            .then((cache) => cache.addAll(
+                APP_SHELL.map((ruta) => new Request(ruta, { cache: 'reload' }))
+            ))
             .then(() => self.skipWaiting())
     );
 });
@@ -50,7 +56,8 @@ self.addEventListener('activate', (e) => {
     );
 });
 
-// Manejo de solicitudes
+// Manejo de solicitudes: primero la red, así siempre ves la última versión;
+// si no hay red o tarda demasiado, la copia guardada, así funciona sin conexión
 self.addEventListener('fetch', (e) => {
 
     const url = new URL(e.request.url);
@@ -66,44 +73,63 @@ self.addEventListener('fetch', (e) => {
         return;
     }
 
-    e.respondWith(
-        caches.match(e.request).then((cacheResp) => {
+    // Evita un error conocido de Chrome cuando DevTools está abierto
+    if (e.request.cache === 'only-if-cached' &&
+        e.request.mode !== 'same-origin') {
+        return;
+    }
 
-            if (cacheResp) {
-                return cacheResp;
-            }
-
-            return fetch(e.request).then((netResp) => {
-
-                // Guardar solo respuestas correctas
-                if (netResp.ok &&
-                    netResp.type !== 'opaque') {
-
-                    const copia = netResp.clone();
-
-                    e.waitUntil(
-                        caches.open(CACHE_NAME)
-                            .then((cache) =>
-                                cache.put(e.request, copia)
-                            )
-                            .catch(console.error)
-                    );
-                }
-
-                return netResp;
-
-            }).catch(async () => {
-
-                // Sin red: cualquier página abre la app guardada
-                if (e.request.mode === 'navigate') {
-                    return caches.match('./index.html');
-                }
-
-                return Response.error();
-            });
-        })
-    );
+    e.respondWith(redPrimero(e));
 });
+
+async function redPrimero(e) {
+
+    const peticion = e.request;
+
+    let guardado = Promise.resolve();
+
+    // "no-cache" revalida con el servidor (una consulta corta, casi siempre 304)
+    // e ignora la copia que GitHub Pages deja 10 minutos en el caché del navegador
+    const intentoRed = fetch(peticion, { cache: 'no-cache' }).then((resp) => {
+
+        // Guardar solo respuestas correctas
+        if (resp.ok) {
+            const copia = resp.clone();
+
+            guardado = caches.open(CACHE_NAME)
+                .then((cache) => cache.put(peticion, copia))
+                .catch(console.error);
+        }
+
+        return resp;
+    });
+
+    // Mantiene vivo el Service Worker hasta que termine la petición y se guarde la copia,
+    // incluso si ya respondimos con la copia vieja porque la red iba lenta.
+    // Debe registrarse desde el inicio: llamarlo después de responder no funciona.
+    e.waitUntil(intentoRed.then(() => guardado, () => { }));
+
+    const respuesta = await Promise.race([
+        intentoRed.catch(() => null),
+        new Promise((resolver) => setTimeout(() => resolver(null), ESPERA_RED_MS))
+    ]);
+
+    if (respuesta && respuesta.ok) {
+        return respuesta;
+    }
+
+    // Sin red, red lenta o error del servidor: usamos la copia guardada
+    const guardada = await caches.match(peticion, { ignoreSearch: true })
+        // Sin red: cualquier página abre la app guardada
+        || (peticion.mode === 'navigate' ? await caches.match('./index.html') : undefined);
+
+    if (guardada) {
+        return guardada;
+    }
+
+    // No hay copia: lo que responda la red (o error si tampoco hay red)
+    return respuesta || intentoRed.catch(() => Response.error());
+}
 
 // Recibir notificaciones Push
 self.addEventListener('push', (e) => {

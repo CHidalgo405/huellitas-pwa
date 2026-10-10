@@ -12,12 +12,27 @@ try {
 
 const PUERTO = process.env.PORT || 3000;
 
-// Sin llaves VAPID no se pueden enviar notificaciones: avisamos claro y salimos
+// Sin llaves VAPID válidas no se pueden enviar notificaciones. En vez de caerse (y que Railway
+// solo muestre "Application failed to respond"), el servidor sigue vivo y /api/salud explica qué falta.
+let errorConfiguracion = null;
+
 if (!process.env.VAPID_PUBLIC || !process.env.VAPID_PRIVATE) {
-    console.error('Faltan VAPID_PUBLIC y VAPID_PRIVATE.');
-    console.error('En local van en server/.env; en Railway, en la pestaña Variables del servicio.');
+    errorConfiguracion = 'Faltan VAPID_PUBLIC y VAPID_PRIVATE. En Railway van en la pestaña Variables del servicio; en tu computadora, en server/.env.';
+} else {
+    try {
+        webpush.setVapidDetails(
+            process.env.VAPID_SUBJECT || 'mailto:tu-correo@ejemplo.com',
+            process.env.VAPID_PUBLIC,
+            process.env.VAPID_PRIVATE
+        );
+    } catch (error) {
+        errorConfiguracion = 'Las llaves VAPID no son válidas: ' + error.message;
+    }
+}
+
+if (errorConfiguracion) {
+    console.error(errorConfiguracion);
     console.error('Genéralas con: npx web-push generate-vapid-keys');
-    process.exit(1);
 }
 
 // Sitios que pueden llamar a este servidor desde un navegador.
@@ -59,13 +74,6 @@ app.use((req, res, next) => {
 
 app.use(cors({ origin: ORIGENES_PERMITIDOS }));
 app.use(express.json({ limit: '10kb' }));
-
-// Configuración VAPID
-webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || 'mailto:tu-correo@ejemplo.com',
-    process.env.VAPID_PUBLIC,
-    process.env.VAPID_PRIVATE
-);
 
 // Límite sencillo por IP (en memoria) para que nadie llene de avisos a todos los suscritos
 const visitas = new Map();
@@ -109,13 +117,26 @@ function endpointValido(endpoint) {
 
 let suscripciones = [];
 
+// Mientras falte configuración, las rutas de avisos responden 503 con la explicación
+function exigirConfiguracion(req, res, next) {
+    if (errorConfiguracion) {
+        return res.status(503).json({ error: errorConfiguracion });
+    }
+
+    next();
+}
+
 // Para comprobar que el servidor está vivo (Railway, o abrirlo en el navegador)
 app.get('/api/salud', (req, res) => {
+    if (errorConfiguracion) {
+        return res.status(503).json({ ok: false, error: errorConfiguracion });
+    }
+
     res.json({ ok: true });
 });
 
 // Registrar suscripción
-app.post('/api/subscribe', limitar(60), (req, res) => {
+app.post('/api/subscribe', exigirConfiguracion, limitar(60), (req, res) => {
 
     const sub = req.body;
 
@@ -146,7 +167,7 @@ app.post('/api/subscribe', limitar(60), (req, res) => {
 });
 
 // Enviar notificaciones Push a todos los suscritos
-app.post('/api/push', limitar(30), async (req, res) => {
+app.post('/api/push', exigirConfiguracion, limitar(30), async (req, res) => {
 
     const { title, body } = req.body || {};
 
@@ -210,6 +231,8 @@ if (fs.existsSync(CARPETA_APP)) {
     });
 }
 
-app.listen(PUERTO, () => {
+// 0.0.0.0 es lo que pide Railway para alcanzar el servidor desde fuera del contenedor
+app.listen(PUERTO, '0.0.0.0', () => {
     console.log(`Servidor Activo en el puerto ${PUERTO}`);
+    console.log(`Variable PORT del entorno: ${process.env.PORT || '(no definida, se usa 3000)'}`);
 });

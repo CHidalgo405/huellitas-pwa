@@ -1,5 +1,5 @@
 // Sube el número en cada publicación: así las pestañas que ya están abiertas se actualizan solas
-const CACHE_NAME = 'huellitas-v4';
+const CACHE_NAME = 'huellitas-v5';
 
 // Tiempo máximo que esperamos a la red antes de usar la copia guardada
 const ESPERA_RED_MS = 2000;

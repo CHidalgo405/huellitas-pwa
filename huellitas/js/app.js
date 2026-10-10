@@ -1,8 +1,11 @@
 // ===== Configuración =====
 
 // Servidor de notificaciones (carpeta server/).
-// Si lo despliegas en otro lugar (Render, Railway...), cambia esta URL.
-const API_URL = 'http://localhost:3000';
+// Abierta desde tu computadora (localhost) usa el servidor local; publicada en
+// GitHub Pages usa el que está desplegado en Railway. Si cambias de dominio, edítalo aquí.
+const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? 'http://localhost:3000'
+    : 'https://huellitas-pwa-production.up.railway.app';
 
 // Llave pública VAPID: la misma que VAPID_PUBLIC en server/.env. Nunca pongas aquí la privada.
 const VAPID_PUBLIC_KEY = 'BNRAGHBZHLR4BkI7APjcnYqC2Vv2pW5oOYSc1PVbKcxHLTVkVda-9f1JC5uOnANjBuBTSl3T6r_Oxowy3MwULns';
